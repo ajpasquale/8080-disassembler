@@ -1,8 +1,8 @@
 package disassembler
 
 import (
-	"bufio"
 	"fmt"
+	"io"
 	"os"
 )
 
@@ -11,16 +11,14 @@ type operation struct {
 	size  int
 }
 
-func Disassemble(bs []byte) {
-	f, err := os.Create("output")
+func Disassemble(file string) {
+	bs, err := os.ReadFile(file)
 
 	if err != nil {
-		panic(err)
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
+		return
 	}
-
-	defer f.Close()
-
-	w := bufio.NewWriter(f)
 
 	for i := 0; i < len(bs); i++ {
 		b := bs[i]
@@ -28,23 +26,16 @@ func Disassemble(bs []byte) {
 		switch op.size {
 		case 0:
 		case 1:
-			_, err := fmt.Fprintf(w, "%04d %02x %s\n", i, b, op.instr)
-			if err != nil {
-				panic(err)
-			}
+			s := fmt.Sprintf("%04d %02x %s\n", i, b, op.instr)
+			io.WriteString(os.Stdout, s)
 		case 2:
-			_, err := fmt.Fprintf(w, "%04d %02x %02x %s $%02x\n", i, b, bs[i+1], op.instr, bs[i+1])
-			if err != nil {
-				panic(err)
-			}
+			s := fmt.Sprintf("%04d %02x %02x %s $%02x\n", i, b, bs[i+1], op.instr, bs[i+1])
+			io.WriteString(os.Stdout, s)
 			i += op.size - 1
 		case 3:
-			_, err := fmt.Fprintf(w, "%04d %02x %02x %02x %s $%02x%02x\n", i, b, bs[i+1], bs[i+2], op.instr, bs[i+2], bs[i+1])
-			if err != nil {
-				panic(err)
-			}
+			s := fmt.Sprintf("%04d %02x %02x %02x %s $%02x%02x\n", i, b, bs[i+1], bs[i+2], op.instr, bs[i+2], bs[i+1])
+			io.WriteString(os.Stdout, s)
 			i += op.size - 1
 		}
 	}
-	w.Flush()
 }
